@@ -1,0 +1,32 @@
+- name: Download node-exporter archive
+  ansible.builtin.shell:
+    cmd: wget https://github.com/prometheus/node_exporter/releases/download/v1.3.1/node_exporter-1.3.1.linux-amd64.tar.gz && mv node_exporter-1.3.1.linux-amd64.tar.gz  /tmp/
+
+- name: Extract node-exporter into tmp
+  unarchive:
+    src: /tmp/node_exporter-1.3.1.linux-amd64.tar.gz
+    dest: /tmp
+    copy: no
+
+- name: Move node-exporter bin
+  ansible.builtin.shell:
+    cmd: mv /tmp/node_exporter-1.3.1.linux-amd64/node_exporter /usr/local/bin/
+
+- name: Create user and group for node-exporter
+  ansible.builtin.shell:
+    cmd: useradd -rs /bin/false node-exporter && chown node-exporter:node-exporter /usr/local/bin/node_exporter
+  ignore_errors: yes
+
+- name: Copy node-exporter.service
+  ansible.builtin.copy:
+    src: node-exporter.service
+    dest: /lib/systemd/system/node-exporter.service
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+    remote_src: no
+
+- name: Start service
+  ansible.builtin.shell:
+    cmd: systemctl daemon-reload && systemctl enable --now node-exporter.service
+  ignore_errors: yes

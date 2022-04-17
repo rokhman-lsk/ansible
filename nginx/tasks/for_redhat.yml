@@ -1,0 +1,66 @@
+- name: Install nginx
+  dnf:
+    name: '@nginx:1.18'
+    state: present
+
+- name: Disable selinux now
+  ansible.builtin.shell:
+    cmd: setenforce 0
+  ignore_errors: yes
+
+- name: Disable selinux
+  ansible.builtin.replace:
+    path: /etc/selinux/config
+    regexp: 'SELINUX=enforcing'
+    replace: 'SELINUX=disabled'
+
+- name: Move nginx config
+  template:
+    src: nginx.conf.j2
+    dest: /tmp/nginx.conf
+
+- name: Get cksum of nginx template
+  stat:
+    path : "/tmp/nginx.conf"
+  register: tmp
+
+- name: Current SHA1
+  set_fact:
+    mf1sha1: "{{ tmp.stat.checksum }}"
+
+- name: Get cksum of nginx config
+  stat:
+    path : "/etc/nginx/nginx.conf"
+  register: conf
+
+- name: Current SHA1
+  set_fact:
+    mf2sha1: "{{ conf.stat.checksum }}"
+
+- name: Remove default config
+  file:
+    path: /etc/nginx/nginx.conf
+    state: absent
+  when: mf1sha1 != mf2sha1
+
+- name: Move nginx config
+  ansible.builtin.shell:
+    cmd: mv /tmp/nginx.conf /etc/nginx/nginx.conf
+  when: mf1sha1 != mf2sha1
+
+- name: Restart nginx
+  ansible.builtin.shell:
+    cmd: systemctl restart nginx
+  when: mf1sha1 != mf2sha1
+
+- name: Check if nginx is started and enabled on boot
+  systemd:
+    daemon_reload: yes
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: Stop firewalld
+  ansible.builtin.shell:
+    cmd: systemctl stop firewalld
+  ignore_errors: yes

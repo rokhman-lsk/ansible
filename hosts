@@ -1,0 +1,7 @@
+[test]
+prod_test ansible_host=10.62.36.6 ansible_user=rokhman ansible_password=rokhman dns_name=vm2.sth63.srequest.ru
+infra_test ansible_host=10.62.36.7 ansible_user=rokhman ansible_password=rokhman dns_name=vm2.sth63.srequest.ru
+
+[vk]
+prod-ubuntu ansible_host=10.115.63.102 ansible_user=sre-quest ansible_password=sre-quest dns_name=vm2.sth63.srequest.ru
+prod-alma ansible_host=10.115.63.103 ansible_user=sre-quest ansible_password=sre-quest dns_name=vm3.sth63.srequest.ru

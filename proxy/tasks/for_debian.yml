@@ -1,0 +1,44 @@
+- name: Export http and https proxy
+  ansible.builtin.shell:
+    cmd: "export {{ item }}='http://10.115.63.1:8080'"
+  loop:
+    - HTTP_PROXY
+    - HTTPS_PROXY
+
+- name: Add apt proxy
+  ansible.builtin.copy:
+    src: apt.conf
+    dest: /etc/apt/apt.conf
+    owner: root
+    group: root
+    mode: u=rw,g=r,o=r
+
+- name: Apt update
+  apt:
+    name: "*"
+    state: latest
+
+- name: Install utils
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - tree
+    - vim
+    - wget
+    - tar
+    - tcpdump
+    - net-tools
+
+- name: Add wget proxy
+  ansible.builtin.lineinfile:
+    path: "/etc/wgetrc"
+    line: "{{ item }} = http://10.115.63.1:8080/"
+  loop:
+    - http_proxy
+    - https_proxy
+
+- name: Wget proxy on
+  ansible.builtin.lineinfile:
+    path: "/etc/wgetrc"
+    line: "use_proxy = on"

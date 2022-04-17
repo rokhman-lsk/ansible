@@ -1,0 +1,52 @@
+- name: Export http and https proxy
+  ansible.builtin.shell:
+    cmd: "export {{ item }}='http://10.115.63.1:8080'"
+  loop:
+    - HTTP_PROXY
+    - HTTPS_PROXY
+
+- name: Import epel repo
+  dnf:
+    name: epel-release
+    state: present
+
+- name: Import remi GPG key
+  rpm_key:
+    key: https://rpms.remirepo.net/RPM-GPG-KEY-remi2018
+    state: present
+  ignore_errors: yes
+
+- name: Import remi repo
+  dnf:
+    name: http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+    state: present
+  ignore_errors: yes
+
+- name: Install php
+  yum:
+    name: 
+      - '@php:7.4'
+      - 'php'
+      - 'php-cli'
+      - 'php-fpm'
+      - 'php-common'
+      - 'php-mysqlnd'
+      - 'php-json'
+      - 'php-opcache'
+      - 'php-mbstring'
+      - 'php-xml'
+      - 'php-gd'
+      - 'php-curl'
+
+- name: Change nginx user and group in /etc/php-fpm.d/www.conf
+  ansible.builtin.replace:
+    path: /etc/php-fpm.d/www.conf
+    regexp: "^{{ item }} apache"
+    replace: "{{ item }} nginx"
+  loop:
+    - user = 
+    - group = 
+
+- name: Restart php-fpm
+  ansible.builtin.shell:
+    cmd: systemctl restart php-fpm

@@ -1,0 +1,61 @@
+- name: Download wordpress archive
+  ansible.builtin.shell:
+    cmd: wget -c http://wordpress.org/latest.tar.gz && mv latest.tar.gz /tmp/
+
+- name: Extract wordpress into tmp
+  unarchive:
+    src: /tmp/latest.tar.gz
+    dest: /tmp
+    owner: www-data
+    group: www-data
+    copy: no
+
+- name: Rename wp
+  ansible.builtin.shell:
+    cmd: mv /tmp/wordpress /tmp/rokhman.ru
+  ignore_errors: yes
+
+- name: Check that the wp-config exists
+  stat:
+    path: /var/www/rokhman.ru/wp-config.php
+  register: stat_result
+
+- name: Check wordpress files and delete
+  file:
+    path: /var/www/rokhman.ru
+    state: absent
+  when: not stat_result.stat.exists    
+  ignore_errors: yes
+
+- name: Move wordpress files
+  ansible.builtin.shell:
+    cmd: mv /tmp/rokhman.ru /var/www/
+  when: not stat_result.stat.exists
+
+- name: Copy wp-config-sample.php
+  ansible.builtin.copy:
+    src: /var/www/rokhman.ru/wp-config-sample.php
+    dest: /var/www/rokhman.ru/wp-config.php
+    owner: www-data
+    group: www-data
+    mode: u=rw,g=r,o=r
+    remote_src: yes
+  when: not stat_result.stat.exists
+
+- name: Change db_name
+  ansible.builtin.lineinfile:
+    path: /var/www/rokhman.ru/wp-config.php
+    regexp: "^define. 'DB_NAME'.*"
+    line: "define( 'DB_NAME', 'wp_database' );"
+
+- name: Change db_user
+  ansible.builtin.lineinfile:
+    path: /var/www/rokhman.ru/wp-config.php
+    regexp: "^define. 'DB_USER'.*"
+    line: "define( 'DB_USER', 'wp_user' );"
+
+- name: Change db_pass
+  ansible.builtin.lineinfile:
+    path: /var/www/rokhman.ru/wp-config.php
+    regexp: "^define. 'DB_PASSWORD'.*"
+    line: "define( 'DB_PASSWORD', 'wp_user' );"

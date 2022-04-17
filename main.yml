@@ -1,0 +1,12 @@
+- name: proxy, ssh and lemp + wp + node-exporter
+  hosts: vk
+  become: yes
+  gather_facts: yes
+  roles:
+    - proxy
+    - ssh
+    - nginx
+    - php
+    - wordpress
+    - mysql
+    - node_exporter

@@ -1,0 +1,41 @@
+- name: Export http and https proxy
+  ansible.builtin.shell:
+    cmd: "export {{ item }}='http://10.115.63.1:8080'"
+  loop:
+    - HTTP_PROXY
+    - HTTPS_PROXY
+
+- name: Add dnf proxy
+  ansible.builtin.lineinfile:
+    path: "/etc/dnf/dnf.conf"
+    line: "proxy=http://10.115.63.1:8080"
+
+- name: Dnf update
+  dnf:
+    name: "*"
+    state: latest
+
+- name: Install utils
+  dnf:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - tree
+    - vim
+    - wget
+    - tar
+    - tcpdump
+    - net-tools
+
+- name: Add wget proxy
+  ansible.builtin.lineinfile:
+    path: "/etc/wgetrc"
+    line: "{{ item }} = http://10.115.63.1:8080/"
+  loop:
+    - http_proxy
+    - https_proxy
+
+- name: Wget proxy on
+  ansible.builtin.lineinfile:
+    path: "/etc/wgetrc"
+    line: "use_proxy = on"

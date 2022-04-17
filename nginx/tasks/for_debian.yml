@@ -1,0 +1,136 @@
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+
+- name: Install apache
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - apache2
+    - apache2-utils
+
+- name: Disable selinux now
+  ansible.builtin.shell:
+    cmd: setenforce 0
+  ignore_errors: yes
+
+- name: Disable selinux
+  ansible.builtin.replace:
+    path: /etc/selinux/config
+    regexp: 'SELINUX=enforcing'
+    replace: 'SELINUX=disabled'
+  ignore_errors: yes
+
+- name: Move nginx config
+  template:
+    src: rokhman.ru.conf.j2
+    dest: /tmp/rokhman.ru.conf
+
+- name: Move apache config
+  template:
+    src: rokhman.ru.apache.conf.j2
+    dest: /tmp/rokhman.ru.apache.conf
+
+- name: Get cksum of nginx template
+  stat:
+    path : "/tmp/rokhman.ru.conf"
+  register: tmp
+
+- name: Get cksum of apache template
+  stat:
+    path : "/tmp/rokhman.ru.apache.conf"
+  register: tmp2  
+
+- name: Current SHA1 nginx temp
+  set_fact:
+    mf1sha1: "{{ tmp.stat.checksum }}"
+
+- name: Current SHA1 apache temp
+  set_fact:
+    mf3sha1: "{{ tmp2.stat.checksum }}"
+
+- name: Get cksum of nginx config
+  stat:
+    path : "/etc/nginx/sites-available/rokhman.ru.conf"
+  register: conf
+
+- name: Get cksum of apache config
+  stat:
+    path : "/etc/apache2/sites-available/rokhman.ru.conf"
+  register: conf2
+
+- name: Current SHA1 nginx conf
+  set_fact:
+    mf2sha1: "{{ conf.stat.checksum }}"
+  ignore_errors: yes
+
+- name: Current SHA1 apache conf
+  set_fact:
+    mf4sha1: "{{ conf2.stat.checksum }}"
+  ignore_errors: yes
+
+- name: Remove default config nginx
+  file:
+    path: /etc/nginx/sites-available/rokhman.ru.conf
+    state: absent
+  when: mf1sha1 != mf2sha1
+  ignore_errors: yes
+
+- name: Remove default config nginx link
+  file:
+    path: /etc/nginx/sites-enabled/rokhman.ru.conf
+    state: absent
+  when: mf1sha1 != mf2sha1  
+  ignore_errors: yes
+
+- name: Remove default config apache
+  file:
+    path: /etc/apache2/sites-available/rokhman.ru.conf
+    state: absent
+  when: mf3sha1 != mf4sha1
+  ignore_errors: yes
+
+- name: Remove default config apache link
+  file:
+    path: /etc/apache2/sites-enabled/rokhman.ru.conf
+    state: absent
+  when: mf3sha1 != mf4sha1
+  ignore_errors: yes
+
+- name: Move nginx config
+  ansible.builtin.shell:
+    cmd: mv /tmp/rokhman.ru.conf /etc/nginx/sites-available/rokhman.ru.conf && ln -s /etc/nginx/sites-available/rokhman.ru.conf /etc/nginx/sites-enabled/
+  when: mf1sha1 != mf2sha1
+  ignore_errors: yes
+
+- name: Move apache2 config
+  ansible.builtin.shell:
+    cmd: mv /tmp/rokhman.ru.apache.conf /etc/apache2/sites-available/rokhman.ru.conf && ln -s /etc/apache2/sites-available/rokhman.ru.conf /etc/apache2/sites-enabled/
+  when: mf3sha1 != mf4sha1
+  ignore_errors: yes
+
+- name: Restart nginx
+  ansible.builtin.shell:
+    cmd: systemctl restart nginx
+  when: mf1sha1 != mf2sha1
+
+- name: Restart apache
+  ansible.builtin.shell:
+    cmd: systemctl restart apache2
+  when: mf3sha1 != mf4sha1
+
+- name: Check if nginx is started and enabled on boot
+  systemd:
+    daemon_reload: yes
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: Check if apache is started and enabled on boot
+  systemd:
+    daemon_reload: yes
+    name: apache2
+    enabled: yes
+    state: started
